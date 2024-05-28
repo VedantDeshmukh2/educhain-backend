@@ -1,23 +1,14 @@
-from fastapi import FastAPI, status, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List
-from dotenv import load_dotenv
 import os
+from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+
+from pydantic import BaseModel, ValidationError
+from dotenv import load_dotenv
+
+from educhain import qna_engine
 
 # Load environment variables
 load_dotenv()
-
-# Connect to the database (example using PostgreSQL)
-# DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Define the data model
-
-
-class Item(BaseModel):
-    id: int
-    name: str
-    description: str
 
 
 app = FastAPI()
@@ -33,20 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory database for demonstration purposes
-items = [
-    {
-        "id": 1,
-        "name": "Item 1",
-        "description": "Description for item 1"
-    },
-    {
-        "id": 2,
-        "name": "Item 2",
-        "description": "Description for item 2"
-    }
-]
-
 
 # Root path
 @app.get("/", status_code=status.HTTP_200_OK)
@@ -54,39 +31,22 @@ def root():
     return {"message": "Server is running"}
 
 
-# CRUD operations
-@app.get("/items", response_model=List[Item])
-def get_items():
-    return items
+# Define the data model
+class GenerateMCQRequest(BaseModel):
+    topic: str
+    num: int
 
 
-@app.post("/items", response_model=Item)
-def create_item(item: Item):
-    items.append(item)
-    return item
-
-
-@app.get("/items/{item_id}", response_model=Item)
-def get_item(item_id: int):
-    for item in items:
-        if item.id == item_id:
-            return item
-    raise HTTPException(status_code=404, detail="Item not found")
-
-
-@app.put("/items/{item_id}", response_model=Item)
-def update_item(item_id: int, updated_item: Item):
-    for i, item in enumerate(items):
-        if item.id == item_id:
-            items[i] = updated_item
-            return updated_item
-    raise HTTPException(status_code=404, detail="Item not found")
-
-
-@app.delete("/items/{item_id}")
-def delete_item(item_id: int):
-    for i, item in enumerate(items):
-        if item.id == item_id:
-            items.pop(i)
-            return {"message": "Item deleted"}
-    raise HTTPException(status_code=404, detail="Item not found")
+@app.post("/generate_mcq", status_code=status.HTTP_200_OK)
+async def generate_mcq_endpoint(request_body: GenerateMCQRequest):
+    try:
+        topic = request_body.topic
+        num = request_body.num
+        questions = qna_engine.generate_mcq(topic=topic, num=num)
+        return {"questions": questions}
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
