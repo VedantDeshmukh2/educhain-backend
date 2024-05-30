@@ -43,7 +43,7 @@ async def generate_mcq_endpoint(request_body: GenerateMCQRequest):
         topic = request_body.topic
         num = request_body.num
         questions = qna_engine.generate_mcq(topic=topic, num=num)
-        return {"questions": questions}
+        return questions
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
