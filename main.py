@@ -37,7 +37,7 @@ class GenerateMCQRequest(BaseModel):
     num: int
 
 
-@app.post("/generate_mcq", status_code=status.HTTP_200_OK)
+@app.post("/generate-mcq", status_code=status.HTTP_200_OK)
 async def generate_mcq_endpoint(request_body: GenerateMCQRequest):
     try:
         topic = request_body.topic
