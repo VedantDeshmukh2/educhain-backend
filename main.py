@@ -15,6 +15,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "https://educhain.in",
 ]
 app.add_middleware(
     CORSMiddleware,
