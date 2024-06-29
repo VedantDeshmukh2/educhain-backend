@@ -2,14 +2,13 @@ import os
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
-from typing import List, Optional
+from typing import List
 from dotenv import load_dotenv
 
 from educhain import qna_engine, content_engine
 
 # Load environment variables
 load_dotenv()
-
 
 app = FastAPI()
 
@@ -26,11 +25,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Root path
+
+
 @app.get("/", status_code=status.HTTP_200_OK)
 def root():
     return {"message": "Server is running"}
+
+# Define input models
 
 
 class MCQRequest(BaseModel):
@@ -44,14 +46,22 @@ class LessonPlanRequest(BaseModel):
     duration: int  # Duration in minutes
 
 
-# class QuestionPaperRequest(BaseModel):
-#     subject: str
-#     grade_level: int
-#     num_questions: int
-#     question_types: List[str] = ["multiple_choice"]
-#     time_limit: Optional[int] = None
-#     difficulty_level: Optional[str] = None
-#     topics: Optional[List[str]] = None
+class NCERTLessonPlan(BaseModel):
+    subject: str
+    topic: str
+    grade: int
+    duration: str
+    objectives: List[str]
+    prerequisites: List[str]
+    introduction: str
+    content_outline: List[str]
+    activities: List[str]
+    assessment: str
+    conclusion: str
+    resources: List[str]
+    timeline: List[str]
+
+# MCQ generation endpoint
 
 
 @app.post("/generate-mcq", status_code=status.HTTP_200_OK)
@@ -68,15 +78,21 @@ async def generate_mcq_endpoint(request_body: MCQRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+# Lesson plan generation endpoint
+
 
 @app.post("/generate-lesson-plan", status_code=status.HTTP_200_OK)
 async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
     try:
         subject = request_body.subject
-        level = request_body.level
+        grade = request_body.grade
         duration = request_body.duration
         lesson_plan = content_engine.generate_lesson_plan(
-            subject=subject, level=level, duration=duration)
+            subject=subject,
+            grade=grade,
+            duration=duration,
+            response_model=NCERTLessonPlan
+        )
         return lesson_plan
     except ValidationError as e:
         raise HTTPException(
@@ -85,31 +101,45 @@ async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+# Lesson plan download endpoint
 
-# @app.post("/generate-question-paper", status_code=status.HTTP_200_OK)
-# async def generate_question_paper_endpoint(request_body: QuestionPaperRequest):
+
+# @app.post("/download-lesson-plan")
+# async def download_lesson_plan(lesson_plan: NCERTLessonPlan, file_format: str):
 #     try:
-#         subject = request_body.subject
-#         grade_level = request_body.grade_level
-#         num_questions = request_body.num_questions
-#         question_types = request_body.question_types
-#         time_limit = request_body.time_limit
-#         difficulty_level = request_body.difficulty_level
-#         topics = request_body.topics
+#         if file_format.lower() == 'pdf':
+#             buffer = create_pdf(lesson_plan)
+#             media_type = 'application/pdf'
+#             file_extension = 'pdf'
+#         elif file_format.lower() == 'doc':
+#             buffer = create_doc(lesson_plan)
+#             media_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+#             file_extension = 'docx'
+#         else:
+#             raise ValueError("Unsupported file format")
 
-#         question_paper = content_engine.generate_question_paper(
-#             subject=subject,
-#             grade_level=grade_level,
-#             num_questions=num_questions,
-#             question_types=question_types,
-#             time_limit=time_limit,
-#             difficulty_level=difficulty_level,
-#             topics=topics
+#         return StreamingResponse(
+#             io.BytesIO(buffer.getvalue()),
+#             media_type=media_type,
+#             headers={
+#                 "Content-Disposition": f"attachment; filename=lesson_plan.{file_extension}"}
 #         )
-#         return question_paper
-#     except ValidationError as e:
-#         raise HTTPException(
-#             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 #     except Exception as e:
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# Implement the create_pdf and create_doc functions here
+
+
+# def create_pdf(lesson_plan):
+#     # Implementation from your existing code
+#     pass
+
+
+# def create_doc(lesson_plan):
+#     # Implementation from your existing code
+#     pass
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
