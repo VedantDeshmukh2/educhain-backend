@@ -42,6 +42,7 @@ class MCQRequest(BaseModel):
 
 class LessonPlanRequest(BaseModel):
     subject: str
+    topic: str  # Added topic parameter
     grade: int
     duration: int  # Duration in minutes
 
@@ -85,10 +86,12 @@ async def generate_mcq_endpoint(request_body: MCQRequest):
 async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
     try:
         subject = request_body.subject
+        topic = request_body.topic  # Added topic parameter
         grade = request_body.grade
         duration = request_body.duration
         lesson_plan = content_engine.generate_lesson_plan(
             subject=subject,
+            topic=topic,  # Added topic parameter
             grade=grade,
             duration=duration,
             response_model=NCERTLessonPlan
@@ -100,6 +103,7 @@ async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 # Lesson plan download endpoint
 
