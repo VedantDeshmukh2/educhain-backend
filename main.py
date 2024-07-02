@@ -36,8 +36,12 @@ def root():
 
 
 class MCQRequest(BaseModel):
+    subject: str
+    grade: int
     topic: str
     num: int
+    custom_instructions: str
+    is_ncert: bool
 
 
 class LessonPlanRequest(BaseModel):
@@ -45,6 +49,7 @@ class LessonPlanRequest(BaseModel):
     topic: str  # Added topic parameter
     grade: int
     duration: int  # Duration in minutes
+    custom_instructions: str
 
 
 class NCERTLessonPlan(BaseModel):
@@ -66,18 +71,19 @@ class NCERTLessonPlan(BaseModel):
 
 
 @app.post("/generate-mcq", status_code=status.HTTP_200_OK)
-async def generate_mcq_endpoint(request_body: MCQRequest):
+async def api_generate_mcq_questions(request: MCQRequest):
     try:
-        topic = request_body.topic
-        num = request_body.num
-        questions = qna_engine.generate_mcq(topic=topic, num=num)
-        return questions
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        result = qna_engine.generate_mcq(
+            subject=request.subject,
+            grade=request.grade,
+            topic=request.topic,
+            num=request.num,
+            custom_instructions=request.custom_instructions,
+            is_ncert=request.is_ncert
+        )
+        return result
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Lesson plan generation endpoint
 
@@ -89,12 +95,14 @@ async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
         topic = request_body.topic  # Added topic parameter
         grade = request_body.grade
         duration = request_body.duration
+        custom_instructions = request_body.custom_instructions
         lesson_plan = content_engine.generate_lesson_plan(
             subject=subject,
             topic=topic,  # Added topic parameter
             grade=grade,
             duration=duration,
-            response_model=NCERTLessonPlan
+            response_model=NCERTLessonPlan,
+            custom_instructions=custom_instructions
         )
         return lesson_plan
     except ValidationError as e:
