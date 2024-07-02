@@ -73,13 +73,27 @@ class NCERTLessonPlan(BaseModel):
 @app.post("/generate-mcq", status_code=status.HTTP_200_OK)
 async def api_generate_mcq_questions(request: MCQRequest):
     try:
+        subject = request.subject
+        grade = request.grade
+        topic = request.topic
+        num = request.num
+
+        custom_ncert_template = """
+         Generate {num} multiple-choice question (MCQ) based on the given topic and level.
+         Provide the question, four answer options, and the correct answer.
+         Topic: {topic}
+         Subject: {subject}
+         Grade: {grade}
+        """
+
         result = qna_engine.generate_mcq(
-            subject=request.subject,
-            grade=request.grade,
-            topic=request.topic,
-            num=request.num,
-            custom_instructions=request.custom_instructions,
-            is_ncert=request.is_ncert
+            topic=topic,
+            num=num,
+            subject=subject,
+            grade=grade,
+            custom_instructions=custom_ncert_template + request.custom_instructions,
+            is_ncert=request.is_ncert,
+            prompt_template=custom_ncert_template
         )
         return result
     except Exception as e:
@@ -88,21 +102,52 @@ async def api_generate_mcq_questions(request: MCQRequest):
 # Lesson plan generation endpoint
 
 
+
+ncert_lesson_plan_template = """
+Generate a comprehensive NCERT-aligned lesson plan for the given subject, topic, grade, and duration.
+Ensure that the lesson plan follows NCERT guidelines and curriculum standards.
+
+Subject: {subject}
+Topic: {topic}
+Grade: {grade}
+Duration: {duration} minutes
+
+Include the following details in the lesson plan:
+1. Title: A concise title for the lesson plan including the duration.
+2. Objectives: List 3-4 specific learning objectives that students will achieve by the end of the lesson.
+3. Lesson Outline: Provide a detailed outline of the lesson, including:
+   - Introduction
+   - Main content sections (covering the key concepts)
+   - Activities or demonstrations
+   - Review and application
+   - Conclusion and assessment
+   For each section, include:
+   - A brief description of the content or activity
+   - The duration in minutes
+   - Any specific instructions or notes for the teacher
+
+Ensure that the lesson plan is culturally relevant and appropriate for Indian students, aligning with NCERT standards.
+"""
 @app.post("/generate-lesson-plan", status_code=status.HTTP_200_OK)
 async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
+
     try:
+
         subject = request_body.subject
         topic = request_body.topic  # Added topic parameter
         grade = request_body.grade
         duration = request_body.duration
         custom_instructions = request_body.custom_instructions
+
         lesson_plan = content_engine.generate_lesson_plan(
             subject=subject,
             topic=topic,  # Added topic parameter
             grade=grade,
             duration=duration,
             response_model=NCERTLessonPlan,
-            custom_instructions=custom_instructions
+            custom_instructions=custom_instructions,
+            prompt_template=ncert_lesson_plan_template
+            
         )
         return lesson_plan
     except ValidationError as e:
