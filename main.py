@@ -52,22 +52,13 @@ class LessonPlanRequest(BaseModel):
     duration: int  # Duration in minutes
     custom_instructions: str
 
-
 class NCERTLessonPlan(BaseModel):
-    subject: str
-    topic: str
-    grade: int
-    duration: str
-    objectives: List[str]
-    prerequisites: List[str]
-    introduction: str
-    content_outline: List[str]
-    activities: List[str]
-    assessment: str
-    conclusion: str
-    resources: List[str]
-    timeline: List[str]
+    title: str = Field(description="The title of the lesson plan")
+    objectives: List[str] = Field(description="List of learning objectives for the lesson")
+    lesson_outline: List[dict] = Field(description="Outline of the lesson with sections and durations")
 
+    class Config:
+        extra = "allow"  # This allows for additional fields in the data
 # MCQ generation endpoint
 
 
