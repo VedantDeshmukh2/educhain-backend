@@ -36,12 +36,13 @@ def root():
 
 
 class MCQRequest(BaseModel):
+    grade: str
     subject: str
-    grade: int
     topic: str
-    num: int
-    custom_instructions: str
-    is_ncert: bool
+    subtopic: str
+    isNcert: bool = False
+    numberOfQuestions: int = 5
+    customInstructions: str = ""
 
 
 class LessonPlanRequest(BaseModel):
@@ -73,34 +74,30 @@ class NCERTLessonPlan(BaseModel):
 @app.post("/generate-mcq", status_code=status.HTTP_200_OK)
 async def api_generate_mcq_questions(request: MCQRequest):
     try:
-        subject = request.subject
-        grade = request.grade
-        topic = request.topic
-        num = request.num
-
         custom_ncert_template = """
-         Generate {num} multiple-choice question (MCQ) based on the given topic and level.
-         Provide the question, four answer options, and the correct answer.
-         Topic: {topic}
-         Subject: {subject}
-         Grade: {grade}
+        Generate {num} multiple-choice question (MCQ) based on the given topic and level.
+        Provide the question, four answer options, and the correct answer.
+        Topic: {topic}
+        Subtopic: {subtopic}
+        Subject: {subject}
+        Grade: {grade}
         """
 
         result = qna_engine.generate_mcq(
-            topic=topic,
-            num=num,
-            subject=subject,
-            grade=grade,
-            custom_instructions=custom_ncert_template + request.custom_instructions,
-            is_ncert=request.is_ncert,
-            prompt_template=custom_ncert_template
+            topic=request.topic,
+            num=request.numberOfQuestions,
+            subject=request.subject,
+            grade=request.grade,
+            custom_instructions=custom_ncert_template + request.customInstructions,
+            is_ncert=request.isNcert,
+            prompt_template=custom_ncert_template,
+            subtopic=request.subtopic
         )
         return result
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))
-
 # Lesson plan generation endpoint
-
 
 
 ncert_lesson_plan_template = """
@@ -128,6 +125,8 @@ Include the following details in the lesson plan:
 
 Ensure that the lesson plan is culturally relevant and appropriate for Indian students, aligning with NCERT standards.
 """
+
+
 @app.post("/generate-lesson-plan", status_code=status.HTTP_200_OK)
 async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
 
@@ -147,7 +146,7 @@ async def generate_lesson_plan_endpoint(request_body: LessonPlanRequest):
             response_model=NCERTLessonPlan,
             custom_instructions=custom_instructions,
             prompt_template=ncert_lesson_plan_template
-            
+
         )
         return lesson_plan
     except ValidationError as e:
